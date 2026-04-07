@@ -189,7 +189,8 @@ function normalizeCheckin(obj) {
     nutritionNotes:     obj['Nutrition Notes']        || '',
     forRyan:            obj['For Ryan']               || obj['Coach Question']          || '',
     weekRating,
-    coachNotes:         obj['Coach Notes']            || ''
+    coachNotes:         obj['Coach Notes']            || '',
+    coachNotesDate:     obj['Coach Notes Date']       || ''
   };
 }
 
@@ -201,18 +202,28 @@ function saveCoachNote(ss, rowIndex, note) {
 
   const lastCol = sheet.getLastColumn();
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  let col = headers.indexOf('Coach Notes');
 
-  if (col === -1) {
-    col = lastCol; // append as new column (0-indexed position)
-    const headerCell = sheet.getRange(1, col + 1);
-    headerCell.setValue('Coach Notes');
-    headerCell.setFontWeight('bold');
-    headerCell.setBackground('#2B3C52');
-    headerCell.setFontColor('#ffffff');
+  // Ensure "Coach Notes" column exists
+  let noteCol = headers.indexOf('Coach Notes');
+  if (noteCol === -1) {
+    noteCol = lastCol;
+    const h = sheet.getRange(1, noteCol + 1);
+    h.setValue('Coach Notes');
+    h.setFontWeight('bold').setBackground('#2B3C52').setFontColor('#ffffff');
   }
 
-  sheet.getRange(rowIndex, col + 1).setValue(note || '');
+  // Ensure "Coach Notes Date" column exists (adjacent)
+  let dateCol = headers.indexOf('Coach Notes Date');
+  if (dateCol === -1) {
+    dateCol = Math.max(lastCol, noteCol + 1);
+    const h = sheet.getRange(1, dateCol + 1);
+    h.setValue('Coach Notes Date');
+    h.setFontWeight('bold').setBackground('#2B3C52').setFontColor('#ffffff');
+  }
+
+  const timestamp = new Date().toLocaleString('en-CA', { timeZone: 'America/Edmonton' });
+  sheet.getRange(rowIndex, noteCol + 1).setValue(note || '');
+  sheet.getRange(rowIndex, dateCol + 1).setValue(note ? timestamp : '');
 }
 
 function formatDate(val) {
