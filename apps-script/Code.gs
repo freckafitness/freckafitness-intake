@@ -156,13 +156,15 @@ function jsonResponse(data) {
 function normalizeCheckin(obj) {
   let progressTrend = obj['Progress Trend'];
   if (typeof progressTrend === 'string') {
-    progressTrend = PROGRESS_MAP[progressTrend.trim()] || 0;
+    const cleaned = progressTrend.trim().replace(/\s*\(\d+\)\s*$/, '');
+    progressTrend = PROGRESS_MAP[cleaned] || PROGRESS_MAP[progressTrend.trim()] || 0;
   }
   progressTrend = Number(progressTrend) || 0;
 
   let soreness = obj['Soreness'];
   if (typeof soreness === 'string') {
-    soreness = SORENESS_MAP[soreness.trim()] || 0;
+    const cleaned = soreness.trim().replace(/\s*\(\d+\)\s*$/, '');
+    soreness = SORENESS_MAP[cleaned] || SORENESS_MAP[soreness.trim()] || 0;
   }
   soreness = Number(soreness) || 0;
 
@@ -221,7 +223,8 @@ function saveCoachNote(ss, rowIndex, note) {
     h.setFontWeight('bold').setBackground('#2B3C52').setFontColor('#ffffff');
   }
 
-  const timestamp = new Date().toLocaleString('en-CA', { timeZone: 'America/Edmonton' });
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Edmonton' }));
+  const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   sheet.getRange(rowIndex, noteCol + 1).setValue(note || '');
   sheet.getRange(rowIndex, dateCol + 1).setValue(note ? timestamp : '');
 }
@@ -389,6 +392,61 @@ function sendWeeklyCheckinDigest() {
   ].join('\n\n');
 
   MailApp.sendEmail(COACH_EMAIL, subject, body);
+}
+
+// ── One-time datetime normalizer ──────────────────────────────────────────────
+// Run once from Apps Script editor: normalizeTimestamps()
+// Converts all "Submitted At" and "Coach Notes Date" cells to YYYY-MM-DD HH:MM (24h)
+
+function normalizeTimestamps() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+
+  ['Intake', 'Check-ins'].forEach(sheetName => {
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const colsToFix = ['Submitted At', 'Coach Notes Date'].map(h => headers.indexOf(h)).filter(i => i >= 0);
+
+    if (colsToFix.length === 0) return;
+
+    const lastRow = sheet.getLastRow();
+    colsToFix.forEach(colIdx => {
+      const range = sheet.getRange(2, colIdx + 1, lastRow - 1, 1);
+      const values = range.getValues();
+
+      const updated = values.map(([val]) => {
+        if (!val) return [''];
+        let d;
+        if (val instanceof Date) {
+          d = val;
+        } else {
+          // Parse strings like "2026-04-05, 5:53:17 p.m."
+          const str = val.toString()
+            .replace(',', '')
+            .replace(/(\d+):(\d+):\d+\s*(a\.m\.|p\.m\.)/gi, (_, h, m, period) => {
+              let hr = parseInt(h, 10);
+              if (/p\.m\./i.test(period) && hr !== 12) hr += 12;
+              if (/a\.m\./i.test(period) && hr === 12) hr = 0;
+              return `${String(hr).padStart(2, '0')}:${m}`;
+            });
+          d = new Date(str);
+        }
+        if (isNaN(d)) return [val]; // leave unparseable values alone
+
+        const yyyy = d.getFullYear();
+        const mm   = String(d.getMonth() + 1).padStart(2, '0');
+        const dd   = String(d.getDate()).padStart(2, '0');
+        const hh   = String(d.getHours()).padStart(2, '0');
+        const min  = String(d.getMinutes()).padStart(2, '0');
+        return [`${yyyy}-${mm}-${dd} ${hh}:${min}`];
+      });
+
+      range.setValues(updated);
+    });
+
+    Logger.log(`Normalized timestamps in ${sheetName}`);
+  });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
