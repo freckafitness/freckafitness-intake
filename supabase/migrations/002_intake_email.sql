@@ -3,8 +3,7 @@
 -- Triggers an email to Ryan whenever a new intake is submitted.
 -- Uses pg_net (built into Supabase) + Resend (free tier: 3,000 emails/month).
 --
--- FROM address: onboarding@resend.dev (works without domain verification)
--- After verifying freckafitness.com in Resend, update to intake@freckafitness.com
+-- FROM address: intake@freckafitness.com (freckafitness.com verified in Resend)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -52,7 +51,7 @@ begin
       'Content-Type',  'application/json'
     ),
     body    := jsonb_build_object(
-      'from',    'onboarding@resend.dev',
+      'from',    'intake@freckafitness.com',
       'to',      'freckafitness@gmail.com',
       'subject', _subject,
       'text',    _body
