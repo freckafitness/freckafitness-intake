@@ -1,19 +1,8 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Frecka Fitness — Intake Email Notification
--- Triggers an email to Ryan whenever a new intake is submitted.
--- Uses pg_net (built into Supabase) + Resend (free tier: 3,000 emails/month).
---
--- FROM address: intake@freckafitness.com (freckafitness.com verified in Resend)
+-- Frecka Fitness — Intake Email: move API key to Supabase Vault
+-- Replaces the hardcoded Resend key in notify_new_intake() with a Vault lookup.
+-- The secret must exist in Vault under the name 'resend_api_key'.
 -- ─────────────────────────────────────────────────────────────────────────────
-
-
--- Enable pg_net (makes HTTP calls from the database — built into Supabase free tier)
-create extension if not exists pg_net schema extensions;
-
-
--- ── Email trigger function ────────────────────────────────────────────────────
--- The API key is embedded here. This function is security definer and never
--- exposed via the Supabase API — only reachable by the database trigger itself.
 
 create or replace function public.notify_new_intake()
 returns trigger
@@ -22,8 +11,19 @@ as $$
 declare
   _subject text;
   _body    text;
-  _api_key text; -- loaded from Vault in migration 003
+  _api_key text;
 begin
+  -- Load API key from Vault — never hardcoded in source
+  select decrypted_secret
+    into _api_key
+    from vault.decrypted_secrets
+   where name = 'resend_api_key'
+   limit 1;
+
+  if _api_key is null then
+    raise exception 'notify_new_intake: resend_api_key not found in Vault';
+  end if;
+
   _subject := 'New Intake: ' || coalesce(NEW.first_name, '') || ' ' || coalesce(NEW.last_name, '') || ' — ' || coalesce(NEW.primary_goal, '(no goal)');
 
   _body := 'New client intake submitted.' || E'\n\n'
@@ -61,10 +61,3 @@ begin
   return NEW;
 end;
 $$;
-
-
--- ── Attach trigger to intakes table ──────────────────────────────────────────
-
-create trigger on_intake_insert
-  after insert on public.intakes
-  for each row execute function public.notify_new_intake();
