@@ -920,9 +920,7 @@
         const { error } = await _supabase.from('intakes').insert(payload);
         if (error) throw error;
 
-        document.getElementById('intakeForm').style.display = 'none';
-        document.getElementById('successScreen').classList.add('visible');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.location.href = 'https://freckafitness.com/book-consultation';
 
       } catch (err) {
         console.error(err);
