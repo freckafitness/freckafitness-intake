@@ -475,6 +475,7 @@
       text-decoration: none;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -867,9 +868,14 @@
 
     document.querySelectorAll('input[type="range"]').forEach(updateSlider);
 
-    // ── Form submission ───────────────────────────────────────────
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyUsaukOm4ZMF365CyveDJn8B1dje2jhUlStuuk2udo_WJkcjcrUBxtLc88ir3kB0Ej/exec';
+    // ── Supabase client ───────────────────────────────────────────
+    // The anon key is safe to expose here — RLS limits it to INSERT on intakes only.
+    const SUPABASE_URL  = 'https://uftthvphkmccerergxup.supabase.co';
+    const SUPABASE_ANON = 'sb_publishable_TkYdMrUsU_XEevuHix1nmg_F2oYVPl7';
+    const { createClient } = supabase;
+    const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
+    // ── Form submission ───────────────────────────────────────────
     document.getElementById('intakeForm').addEventListener('submit', async function (e) {
       e.preventDefault();
 
@@ -884,39 +890,35 @@
       const environments = [...document.querySelectorAll('input[name="environment"]:checked')].map(el => el.value);
 
       const payload = {
-        firstName:       document.getElementById('firstName').value.trim(),
-        lastName:        document.getElementById('lastName').value.trim(),
-        email:           document.getElementById('email').value.trim(),
-        phone:           document.getElementById('phone').value.trim(),
-        location:        document.getElementById('location').value.trim(),
-        age:             document.getElementById('age').value.trim(),
-        gender:          document.getElementById('gender').value,
-        primaryGoal:     document.querySelector('input[name="primaryGoal"]:checked')?.value || '',
-        goalDetail:      document.getElementById('goalDetail').value.trim(),
-        timeline:        document.getElementById('timeline').value.trim(),
-        experience:      document.querySelector('input[name="experience"]:checked')?.value || '',
-        trainingDays:    document.getElementById('trainingDays').value,
-        sessionLength:   document.querySelector('input[name="sessionLength"]:checked')?.value || '',
-        environment:     environments.join(', '),
-        currentTraining: document.getElementById('currentTraining').value.trim(),
-        sleepQuality:    document.getElementById('sleepQuality').value,
-        stressLevel:     document.getElementById('stressLevel').value,
-        occupation:      document.querySelector('input[name="occupation"]:checked')?.value || '',
-        nutrition:       document.getElementById('nutrition').value.trim(),
-        injuries:        document.getElementById('injuries').value.trim(),
-        medicalNotes:    document.getElementById('medicalNotes').value.trim(),
-        feedbackPref:    document.querySelector('input[name="feedbackPref"]:checked')?.value || '',
-        referralSource:  document.getElementById('referralSource').value,
-        anythingElse:    document.getElementById('anythingElse').value.trim(),
-        submittedAt:     new Date().toLocaleString('en-CA', { timeZone: 'America/Denver' })
+        first_name:       document.getElementById('firstName').value.trim(),
+        last_name:        document.getElementById('lastName').value.trim(),
+        email:            document.getElementById('email').value.trim(),
+        phone:            document.getElementById('phone').value.trim(),
+        location:         document.getElementById('location').value.trim(),
+        age:              document.getElementById('age').value.trim(),
+        gender:           document.getElementById('gender').value,
+        primary_goal:     document.querySelector('input[name="primaryGoal"]:checked')?.value || '',
+        goal_detail:      document.getElementById('goalDetail').value.trim(),
+        timeline:         document.getElementById('timeline').value.trim(),
+        experience:       document.querySelector('input[name="experience"]:checked')?.value || '',
+        training_days:    document.getElementById('trainingDays').value,
+        session_length:   document.querySelector('input[name="sessionLength"]:checked')?.value || '',
+        environment:      environments.join(', '),
+        current_training: document.getElementById('currentTraining').value.trim(),
+        sleep_quality:    document.getElementById('sleepQuality').value,
+        stress_level:     document.getElementById('stressLevel').value,
+        occupation:       document.querySelector('input[name="occupation"]:checked')?.value || '',
+        nutrition:        document.getElementById('nutrition').value.trim(),
+        injuries:         document.getElementById('injuries').value.trim(),
+        medical_notes:    document.getElementById('medicalNotes').value.trim(),
+        feedback_pref:    document.querySelector('input[name="feedbackPref"]:checked')?.value || '',
+        referral_source:  document.getElementById('referralSource').value,
+        anything_else:    document.getElementById('anythingElse').value.trim()
       };
 
       try {
-        const res = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error('Network response not OK');
+        const { error } = await _supabase.from('intakes').insert(payload);
+        if (error) throw error;
 
         document.getElementById('intakeForm').style.display = 'none';
         document.getElementById('successScreen').classList.add('visible');
