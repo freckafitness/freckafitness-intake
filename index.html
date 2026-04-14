@@ -227,6 +227,93 @@
       flex: 1;
     }
 
+    /* ── Date of Birth picker ── */
+    .dob-picker {
+      background: var(--warm-white);
+      border: 1.5px solid var(--light-grey);
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .dob-step-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid-grey);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dob-back {
+      background: none;
+      border: none;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--mid-grey);
+      cursor: pointer;
+      padding: 0;
+      letter-spacing: 0.05em;
+      font-family: inherit;
+    }
+
+    .dob-back:hover { color: var(--black); }
+
+    .dob-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .dob-chip {
+      background: white;
+      border: 1.5px solid var(--light-grey);
+      border-radius: 6px;
+      padding: 8px 4px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--black);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+    }
+
+    .dob-chip:hover {
+      border-color: var(--accent);
+      color: var(--black);
+    }
+
+    .dob-selected {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 2px;
+    }
+
+    .dob-selected span {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--black);
+    }
+
+    .dob-reset {
+      background: none;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--mid-grey);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    .dob-reset:hover { color: var(--black); }
+
     /* ── Radio/checkbox groups ── */
     .option-group {
       display: flex;
@@ -799,8 +886,17 @@
 
         <div class="field-row">
           <div class="field">
-            <label for="age">Age</label>
-            <input type="number" id="age" name="age" placeholder="30" min="16" max="90" />
+            <label>Date of Birth</label>
+            <input type="hidden" id="birthday" name="birthday" />
+            <div class="dob-picker" id="dobPicker">
+              <div class="dob-step" id="dobStep">
+                <div class="dob-grid" id="dobGrid"></div>
+              </div>
+              <div class="dob-selected" id="dobSelected" style="display:none;">
+                <span id="dobDisplay"></span>
+                <button type="button" class="dob-reset" id="dobReset">Change</button>
+              </div>
+            </div>
           </div>
           <div class="field">
             <label for="gender">Preferred Pronouns</label>
@@ -1075,6 +1171,106 @@
 
     document.querySelectorAll('input[type="range"]').forEach(updateSlider);
 
+    // ── Date of Birth picker ──────────────────────────────────────
+    (function () {
+      const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const grid    = document.getElementById('dobGrid');
+      const step    = document.getElementById('dobStep');
+      const hidden  = document.getElementById('birthday');
+      const display = document.getElementById('dobDisplay');
+      const selected = document.getElementById('dobSelected');
+      const picker   = document.getElementById('dobPicker');
+      const resetBtn = document.getElementById('dobReset');
+
+      let chosenDecade, chosenYear, chosenMonth;
+
+      function daysInMonth(y, m) {
+        return new Date(y, m + 1, 0).getDate();
+      }
+
+      function setLabel(text, showBack, onBack) {
+        let label = step.querySelector('.dob-step-label');
+        if (!label) {
+          label = document.createElement('div');
+          label.className = 'dob-step-label';
+          step.insertBefore(label, grid);
+        }
+        label.innerHTML = `<span>${text}</span>`;
+        if (showBack) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'dob-back';
+          btn.textContent = '← Back';
+          btn.addEventListener('click', onBack);
+          label.appendChild(btn);
+        }
+      }
+
+      function renderChips(items, onClick) {
+        grid.innerHTML = '';
+        items.forEach(item => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'dob-chip';
+          btn.textContent = item.label;
+          btn.addEventListener('click', () => onClick(item.value));
+          grid.appendChild(btn);
+        });
+      }
+
+      function showDecades() {
+        const currentYear = new Date().getFullYear();
+        const maxDecade = Math.floor(currentYear / 10) * 10;
+        const decades = [];
+        for (let d = 1910; d <= maxDecade; d += 10) decades.push({ label: d + 's', value: d });
+        setLabel('Select decade', false);
+        grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+        renderChips(decades, d => { chosenDecade = d; showYears(); });
+      }
+
+      function showYears() {
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        for (let y = chosenDecade; y <= Math.min(chosenDecade + 9, currentYear); y++) {
+          years.push({ label: String(y), value: y });
+        }
+        setLabel('Select year', true, showDecades);
+        grid.style.gridTemplateColumns = 'repeat(5, 1fr)';
+        renderChips(years, y => { chosenYear = y; showMonths(); });
+      }
+
+      function showMonths() {
+        const items = MONTHS.map((m, i) => ({ label: m.slice(0, 3), value: i }));
+        setLabel('Select month', true, showYears);
+        grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+        renderChips(items, m => { chosenMonth = m; showDays(); });
+      }
+
+      function showDays() {
+        const count = daysInMonth(chosenYear, chosenMonth);
+        const items = Array.from({ length: count }, (_, i) => ({ label: String(i + 1), value: i + 1 }));
+        setLabel(`${MONTHS[chosenMonth]} ${chosenYear}`, true, showMonths);
+        grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+        renderChips(items, day => {
+          const mm = String(chosenMonth + 1).padStart(2, '0');
+          const dd = String(day).padStart(2, '0');
+          hidden.value = `${chosenYear}-${mm}-${dd}`;
+          display.textContent = `${MONTHS[chosenMonth]} ${day}, ${chosenYear}`;
+          step.style.display = 'none';
+          selected.style.display = 'flex';
+        });
+      }
+
+      resetBtn.addEventListener('click', () => {
+        hidden.value = '';
+        selected.style.display = 'none';
+        step.style.display = '';
+        showDecades();
+      });
+
+      showDecades();
+    })();
+
     // ── Supabase client ───────────────────────────────────────────
     // The anon key is safe to expose here — RLS limits it to INSERT on intakes only.
     const SUPABASE_URL  = 'https://uftthvphkmccerergxup.supabase.co';
@@ -1113,7 +1309,7 @@
                             return num ? dialRaw + ' ' + num : '';
                           })(),
         location:         document.getElementById('location').value.trim(),
-        age:              document.getElementById('age').value.trim(),
+        birthday:         document.getElementById('birthday').value || null,
         gender:           document.getElementById('gender').value,
         primary_goal:     document.querySelector('input[name="primaryGoal"]:checked')?.value || '',
         goal_detail:      document.getElementById('goalDetail').value.trim(),
