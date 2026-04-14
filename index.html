@@ -460,6 +460,9 @@
 
     .error-msg.visible { display: block; }
 
+    /* ── Honeypot — must stay invisible to all users ── */
+    .hp-field { opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: hidden; pointer-events: none; }
+
     /* ── Footer ── */
     .site-footer {
       background: var(--black);
@@ -475,7 +478,9 @@
       text-decoration: none;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.103.0/dist/umd/supabase.js"
+          integrity="sha384-rm08XZM5pQreOGZb7BaDgXaNmLp98HwlhS7C7puAkkSRHtyJztgFgPVcgmvCXmBt"
+          crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -842,6 +847,12 @@
         </div>
       </div>
 
+      <!-- Honeypot — hidden from real users; bots fill it and get silently dropped -->
+      <div class="hp-field" aria-hidden="true">
+        <label for="website">Website</label>
+        <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+
       <!-- Submit -->
       <div class="submit-wrap">
         <button type="submit" id="submitBtn">Submit Intake Form</button>
@@ -886,6 +897,13 @@
       btn.textContent = 'Submitting…';
       errMsg.classList.remove('visible');
 
+      // Honeypot check — real users never see or fill this field
+      if (document.getElementById('website').value !== '') {
+        // Silently redirect as if successful; do not insert anything
+        window.location.href = 'https://freckafitness.com/book-consultation';
+        return;
+      }
+
       // Collect checkbox values
       const environments = [...document.querySelectorAll('input[name="environment"]:checked')].map(el => el.value);
 
@@ -923,7 +941,6 @@
         window.location.href = 'https://freckafitness.com/book-consultation';
 
       } catch (err) {
-        console.error(err);
         errMsg.classList.add('visible');
         btn.disabled = false;
         btn.textContent = 'Submit Intake Form';
