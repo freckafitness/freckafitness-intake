@@ -228,11 +228,33 @@
     }
 
     /* ── Date of Birth picker ── */
-    .dob-picker {
+    .dob-trigger {
+      width: 100%;
       background: var(--warm-white);
       border: 1.5px solid var(--light-grey);
       border-radius: 6px;
+      color: var(--mid-grey);
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 400;
+      padding: 13px 16px;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .dob-trigger:hover,
+    .dob-trigger.open { border-color: var(--accent); }
+
+    .dob-trigger.has-value { color: var(--black); }
+
+    .dob-picker {
+      background: var(--warm-white);
+      border: 1.5px solid var(--accent);
+      border-top: none;
+      border-radius: 0 0 6px 6px;
       padding: 12px;
+      margin-top: -2px;
     }
 
     .dob-step-label {
@@ -888,13 +910,10 @@
           <div class="field">
             <label>Date of Birth</label>
             <input type="hidden" id="birthday" name="birthday" />
-            <div class="dob-picker" id="dobPicker">
+            <button type="button" class="dob-trigger" id="dobTrigger">Please select</button>
+            <div class="dob-picker" id="dobPicker" style="display:none;">
               <div class="dob-step" id="dobStep">
                 <div class="dob-grid" id="dobGrid"></div>
-              </div>
-              <div class="dob-selected" id="dobSelected" style="display:none;">
-                <span id="dobDisplay"></span>
-                <button type="button" class="dob-reset" id="dobReset">Change</button>
               </div>
             </div>
           </div>
@@ -1177,16 +1196,28 @@
       const grid    = document.getElementById('dobGrid');
       const step    = document.getElementById('dobStep');
       const hidden  = document.getElementById('birthday');
-      const display = document.getElementById('dobDisplay');
-      const selected = document.getElementById('dobSelected');
-      const picker   = document.getElementById('dobPicker');
-      const resetBtn = document.getElementById('dobReset');
+      const picker  = document.getElementById('dobPicker');
+      const trigger = document.getElementById('dobTrigger');
 
       let chosenDecade, chosenYear, chosenMonth;
 
-      function daysInMonth(y, m) {
-        return new Date(y, m + 1, 0).getDate();
+      function open() {
+        picker.style.display = '';
+        trigger.classList.add('open');
+        trigger.style.borderRadius = '6px 6px 0 0';
       }
+
+      function close() {
+        picker.style.display = 'none';
+        trigger.classList.remove('open');
+        trigger.style.borderRadius = '';
+      }
+
+      trigger.addEventListener('click', () => {
+        picker.style.display === 'none' ? open() : close();
+      });
+
+      function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
 
       function setLabel(text, showBack, onBack) {
         let label = step.querySelector('.dob-step-label');
@@ -1206,8 +1237,9 @@
         }
       }
 
-      function renderChips(items, onClick) {
+      function renderChips(items, cols, onClick) {
         grid.innerHTML = '';
+        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         items.forEach(item => {
           const btn = document.createElement('button');
           btn.type = 'button';
@@ -1219,54 +1251,43 @@
       }
 
       function showDecades() {
-        const currentYear = new Date().getFullYear();
-        const maxDecade = Math.floor(currentYear / 10) * 10;
+        const maxDecade = Math.floor(new Date().getFullYear() / 10) * 10;
         const decades = [];
         for (let d = 1910; d <= maxDecade; d += 10) decades.push({ label: d + 's', value: d });
         setLabel('Select decade', false);
-        grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
-        renderChips(decades, d => { chosenDecade = d; showYears(); });
+        renderChips(decades, 4, d => { chosenDecade = d; showYears(); });
       }
 
       function showYears() {
         const currentYear = new Date().getFullYear();
         const years = [];
-        for (let y = chosenDecade; y <= Math.min(chosenDecade + 9, currentYear); y++) {
+        for (let y = chosenDecade; y <= Math.min(chosenDecade + 9, currentYear); y++)
           years.push({ label: String(y), value: y });
-        }
         setLabel('Select year', true, showDecades);
-        grid.style.gridTemplateColumns = 'repeat(5, 1fr)';
-        renderChips(years, y => { chosenYear = y; showMonths(); });
+        renderChips(years, 5, y => { chosenYear = y; showMonths(); });
       }
 
       function showMonths() {
         const items = MONTHS.map((m, i) => ({ label: m.slice(0, 3), value: i }));
         setLabel('Select month', true, showYears);
-        grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
-        renderChips(items, m => { chosenMonth = m; showDays(); });
+        renderChips(items, 4, m => { chosenMonth = m; showDays(); });
       }
 
       function showDays() {
         const count = daysInMonth(chosenYear, chosenMonth);
         const items = Array.from({ length: count }, (_, i) => ({ label: String(i + 1), value: i + 1 }));
         setLabel(`${MONTHS[chosenMonth]} ${chosenYear}`, true, showMonths);
-        grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-        renderChips(items, day => {
+        renderChips(items, 7, day => {
           const mm = String(chosenMonth + 1).padStart(2, '0');
           const dd = String(day).padStart(2, '0');
           hidden.value = `${chosenYear}-${mm}-${dd}`;
-          display.textContent = `${MONTHS[chosenMonth]} ${day}, ${chosenYear}`;
-          step.style.display = 'none';
-          selected.style.display = 'flex';
+          trigger.textContent = `${MONTHS[chosenMonth]} ${day}, ${chosenYear}`;
+          trigger.classList.add('has-value');
+          trigger.style.borderRadius = '';
+          close();
+          showDecades();
         });
       }
-
-      resetBtn.addEventListener('click', () => {
-        hidden.value = '';
-        selected.style.display = 'none';
-        step.style.display = '';
-        showDecades();
-      });
 
       showDecades();
     })();
