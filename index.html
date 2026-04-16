@@ -1323,6 +1323,16 @@
       // Collect checkbox values
       const environments = [...document.querySelectorAll('input[name="environment"]:checked')].map(el => el.value);
 
+      // Environment is required — needed before the consultation call
+      if (environments.length === 0) {
+        errMsg.textContent = 'Please select at least one training environment.';
+        errMsg.classList.add('visible');
+        btn.disabled = false;
+        btn.textContent = 'Submit Intake Form';
+        document.getElementById('env1').closest('.field').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
       const payload = {
         first_name:       document.getElementById('firstName').value.trim(),
         last_name:        document.getElementById('lastName').value.trim(),
@@ -1361,6 +1371,7 @@
         window.location.href = 'https://freckafitness.com/book-consultation';
 
       } catch (err) {
+        errMsg.textContent = 'Something went wrong — please try again or email ryan@freckafitness.com directly.';
         errMsg.classList.add('visible');
         btn.disabled = false;
         btn.textContent = 'Submit Intake Form';
