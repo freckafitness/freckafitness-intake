@@ -336,6 +336,50 @@
 
     .dob-reset:hover { color: var(--black); }
 
+    /* ── Colour picker ── */
+    .color-pick-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 16px;
+      background: var(--warm-white);
+      border: 1.5px solid var(--light-grey);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      user-select: none;
+    }
+
+    .color-pick-row:hover { border-color: var(--accent); }
+
+    .color-swatch {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid rgba(0,0,0,0.10);
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+
+    .color-pick-row:hover .color-swatch { transform: scale(1.08); }
+
+    .color-hex-display {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--black);
+      font-family: monospace;
+      letter-spacing: 0.04em;
+    }
+
+    .color-pick-hint {
+      font-size: 12px;
+      color: var(--mid-grey);
+      margin-left: auto;
+      letter-spacing: 0;
+      text-transform: none;
+      font-weight: 400;
+    }
+
     /* ── Radio/checkbox groups ── */
     .option-group {
       display: flex;
@@ -926,6 +970,16 @@
             <input type="text" id="gender" name="gender" placeholder="e.g. She/Her, He/Him, They/Them" />
           </div>
         </div>
+
+        <div class="field">
+          <label>Favourite Color <span class="req">*</span></label>
+          <input type="color" id="favoriteColor" value="#6888E8" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;" />
+          <div class="color-pick-row" id="colorPickRow">
+            <div class="color-swatch" id="colorSwatch" style="background:#6888E8;"></div>
+            <span class="color-hex-display" id="colorHexDisplay">#6888E8</span>
+            <span class="color-pick-hint">Tap to choose</span>
+          </div>
+        </div>
       </div>
 
       <!-- 02 · Goals -->
@@ -1194,6 +1248,20 @@
 
     document.querySelectorAll('input[type="range"]').forEach(updateSlider);
 
+    // ── Favourite Color picker ────────────────────────────────────
+    (function () {
+      const input   = document.getElementById('favoriteColor');
+      const swatch  = document.getElementById('colorSwatch');
+      const hexDisp = document.getElementById('colorHexDisplay');
+      const row     = document.getElementById('colorPickRow');
+
+      row.addEventListener('click', () => input.click());
+      input.addEventListener('input', () => {
+        swatch.style.background = input.value;
+        hexDisp.textContent     = input.value.toUpperCase();
+      });
+    })();
+
     // ── Date of Birth picker ──────────────────────────────────────
     (function () {
       const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1345,6 +1413,7 @@
                           })(),
         location:         document.getElementById('location').value.trim(),
         birthday:         document.getElementById('birthday').value || null,
+        favorite_color:   document.getElementById('favoriteColor').value,
         gender:           document.getElementById('gender').value,
         primary_goal:     document.querySelector('input[name="primaryGoal"]:checked')?.value || '',
         goal_detail:      document.getElementById('goalDetail').value.trim(),
