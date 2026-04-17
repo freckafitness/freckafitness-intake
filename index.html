@@ -1344,10 +1344,10 @@
         UZ:'998',   VU:'678',   VE:'58',   VN:'84',   YE:'967',  ZM:'260',
         ZW:'263'
       };
-      fetch('https://api.country.is/')
+      fetch('https://ipapi.co/json/')
         .then(r => r.json())
-        .then(({ country }) => {
-          const val = countryToOption[country];
+        .then(data => {
+          const val = countryToOption[data.country_code];
           if (val) document.getElementById('countryCode').value = val;
         })
         .catch(() => {}); // silently fall back to default (US)
