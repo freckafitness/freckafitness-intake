@@ -1347,11 +1347,10 @@
       fetch('https://ipapi.co/json/')
         .then(r => r.json())
         .then(data => {
-          console.log('[country detect] country_code:', data.country_code, '| error:', data.error, '| reason:', data.reason);
           const val = countryToOption[data.country_code];
           if (val) document.getElementById('countryCode').value = val;
         })
-        .catch(err => console.log('[country detect] fetch failed:', err.message));
+        .catch(() => {});
     })();
 
     // ── Date of Birth picker ──────────────────────────────────────
