@@ -1289,7 +1289,8 @@
       });
 
       function applyColor(color) {
-        const hex = '#' + color.toHEXA().toString().slice(0, 6);
+        const raw = color.toHEXA().toString().replace(/^#/, '');
+        const hex = '#' + raw.slice(0, 6);
         input.value             = hex;
         swatch.style.background = hex;
         hexDisp.textContent     = hex.toUpperCase();
