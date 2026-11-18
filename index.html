@@ -143,6 +143,20 @@
       margin-bottom: 22px;
     }
 
+    .char-count {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--black);
+      opacity: 0.55;
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    .char-count.near-limit {
+      opacity: 1;
+      color: var(--error);
+    }
+
     label {
       display: block;
       font-size: 12px;
@@ -1035,7 +1049,8 @@
 
         <div class="field">
           <label for="goalDetail">What does success look like in 6 months? <span class="req">*</span></label>
-          <textarea id="goalDetail" name="goalDetail" placeholder="Be as specific as you'd like — a weight lifted, how you look, how you feel, an event you're training for..." required></textarea>
+          <textarea id="goalDetail" name="goalDetail" maxlength="5000" placeholder="Be as specific as you'd like — a weight lifted, how you look, how you feel, an event you're training for..." required></textarea>
+          <div class="char-count" id="goalDetailCount">0 / 5000</div>
         </div>
 
         <div class="field">
@@ -1127,7 +1142,8 @@
 
         <div class="field">
           <label for="currentTraining">What does your current training look like?</label>
-          <textarea id="currentTraining" name="currentTraining" placeholder="Program, Frequency, Recent Performances, Lifts you've been tracking..." style="min-height:80px;"></textarea>
+          <textarea id="currentTraining" name="currentTraining" maxlength="5000" placeholder="Program, Frequency, Recent Performances, Lifts you've been tracking..." style="min-height:80px;"></textarea>
+          <div class="char-count" id="currentTrainingCount">0 / 5000</div>
         </div>
       </div>
 
@@ -1177,7 +1193,8 @@
 
         <div class="field">
           <label for="nutrition">Brief nutrition overview</label>
-          <textarea id="nutrition" name="nutrition" placeholder="No Specific Tracking, Rough Macros, Dietary Restrictions..." style="min-height:80px;"></textarea>
+          <textarea id="nutrition" name="nutrition" maxlength="5000" placeholder="No Specific Tracking, Rough Macros, Dietary Restrictions..." style="min-height:80px;"></textarea>
+          <div class="char-count" id="nutritionCount">0 / 5000</div>
         </div>
       </div>
 
@@ -1187,12 +1204,14 @@
 
         <div class="field">
           <label for="injuries">Current or past injuries / movement restrictions / pain points</label>
-          <textarea id="injuries" name="injuries" placeholder="Any areas we need to work around or be mindful of..." style="min-height:80px;"></textarea>
+          <textarea id="injuries" name="injuries" maxlength="5000" placeholder="Any areas we need to work around or be mindful of..." style="min-height:80px;"></textarea>
+          <div class="char-count" id="injuriesCount">0 / 5000</div>
         </div>
 
         <div class="field">
           <label for="medicalNotes">Anything else health-related I should know?</label>
-          <textarea id="medicalNotes" name="medicalNotes" placeholder="Conditions, medications, surgeries — anything relevant..." style="min-height:80px;"></textarea>
+          <textarea id="medicalNotes" name="medicalNotes" maxlength="5000" placeholder="Conditions, medications, surgeries — anything relevant..." style="min-height:80px;"></textarea>
+          <div class="char-count" id="medicalNotesCount">0 / 5000</div>
         </div>
       </div>
 
@@ -1233,7 +1252,8 @@
 
         <div class="field">
           <label for="anythingElse">Anything else you want Ryan to know before the call?</label>
-          <textarea id="anythingElse" name="anythingElse" placeholder="Open floor — throw it in here." style="min-height:80px;"></textarea>
+          <textarea id="anythingElse" name="anythingElse" maxlength="5000" placeholder="Open floor — throw it in here." style="min-height:80px;"></textarea>
+          <div class="char-count" id="anythingElseCount">0 / 5000</div>
         </div>
       </div>
 
@@ -1462,6 +1482,26 @@
     const { createClient } = supabase;
     const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
+    // ── Character counters for long-answer fields ───────────────────
+    // Keeps the visible count in sync with the DB's 5000-char CHECK constraints
+    // on these fields, so a long answer never silently fails at submit time.
+    (function () {
+      const fields = ['goalDetail', 'currentTraining', 'nutrition', 'injuries', 'medicalNotes', 'anythingElse'];
+      fields.forEach(id => {
+        const el = document.getElementById(id);
+        const counter = document.getElementById(id + 'Count');
+        if (!el || !counter) return;
+        const max = parseInt(el.getAttribute('maxlength'), 10) || 5000;
+        const update = () => {
+          const len = el.value.length;
+          counter.textContent = `${len} / ${max}`;
+          counter.classList.toggle('near-limit', max - len <= 100);
+        };
+        el.addEventListener('input', update);
+        update();
+      });
+    })();
+
     // ── Form submission ───────────────────────────────────────────
     document.getElementById('intakeForm').addEventListener('submit', async function (e) {
       e.preventDefault();
@@ -1532,6 +1572,10 @@
         window.location.href = 'https://freckafitness.com/book-consultation';
 
       } catch (err) {
+        // Always log the raw error so the real cause (RLS, CHECK constraint,
+        // rate limit, etc.) is visible in DevTools instead of only the generic message below.
+        console.error('Intake submission failed:', err);
+
         errMsg.textContent = 'Something went wrong — please try again or email ryan@freckafitness.com directly.';
         errMsg.classList.add('visible');
         btn.disabled = false;
